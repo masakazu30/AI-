@@ -7,7 +7,18 @@
 
 from __future__ import annotations
 
+import os
+
 import streamlit as st
+
+# Streamlit Community Cloud の「Secrets」に入れたAPIキーを環境変数として使えるようにする。
+# （ローカル実行時は secrets が無いので、この処理は静かにスキップされる）
+try:
+    for _key in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        if _key in st.secrets and not os.environ.get(_key):
+            os.environ[_key] = str(st.secrets[_key])
+except Exception:  # noqa: BLE001 — secrets未設定時のエラーは無視
+    pass
 
 from council.data import build_dossier, fetch_company, format_large_number
 from council.debate import run_debate
