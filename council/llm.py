@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 # 既定モデル
 DEFAULT_CLAUDE_MODEL = "claude-opus-4-8"
@@ -72,12 +73,30 @@ class LLMClient:
             self._client = genai
 
     # ------------------------------------------------------------------ #
-    def complete(self, system: str, prompt: str, max_tokens: int = 8000) -> str:
-        """system指示とユーザープロンプトから応答テキストを得る。"""
+    def complete(
+        self, system: str, prompt: str, max_tokens: int = 8000, retries: int = 2
+    ) -> str:
+        """system指示とユーザープロンプトから応答テキストを得る。
+
+        レート制限(429)等に当たった場合は指数バックオフで自動リトライする。
+        """
         self._ensure_client()
-        if self.provider == "claude":
-            return self._complete_claude(system, prompt, max_tokens)
-        return self._complete_gemini(system, prompt, max_tokens)
+        delay = 20.0
+        for attempt in range(retries + 1):
+            try:
+                if self.provider == "claude":
+                    return self._complete_claude(system, prompt, max_tokens)
+                return self._complete_gemini(system, prompt, max_tokens)
+            except LLMError as exc:
+                msg = str(exc).lower()
+                retryable = any(
+                    k in msg for k in ("429", "quota", "rate", "exhausted", "overload")
+                )
+                if attempt < retries and retryable:
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                raise
 
     def _complete_claude(self, system: str, prompt: str, max_tokens: int) -> str:
         try:
