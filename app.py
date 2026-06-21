@@ -166,6 +166,29 @@ if company is not None and grades is not None:
     c3.metric("時価総額", format_large_number(m["market_cap"]))
     c4.metric("PER(実績)", f"{m['trailing_pe']:.1f}" if m["trailing_pe"] else "N/A")
 
+    d1, d2, d3, d4 = st.columns(4)
+    if m.get("target_mean"):
+        up = m.get("analyst_upside", 0.0)
+        d1.metric(
+            "アナリスト目標株価(平均)",
+            f"${m['target_mean']:.2f}",
+            f"{up * 100:+.1f}%",
+        )
+    else:
+        d1.metric("アナリスト目標株価(平均)", "N/A")
+    d2.metric(
+        "目標株価レンジ",
+        f"${m.get('target_low', 0):.0f}〜${m.get('target_high', 0):.0f}"
+        if m.get("target_high")
+        else "N/A",
+    )
+    d3.metric("予想PER", f"{m['forward_pe']:.1f}" if m.get("forward_pe") else "N/A")
+    d4.metric(
+        "配当利回り",
+        f"{m['dividend_yield'] * 100:.2f}%" if m.get("dividend_yield") else "N/A",
+    )
+    st.caption("🎯 評議会としての目標株価は「最終評価」タブに表示されます。")
+
     debate = st.session_state.debate
 
     tab_verdict, tab_debate, tab_quant, tab_data = st.tabs(
