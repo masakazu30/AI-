@@ -14,17 +14,23 @@ AI投資家同士が議論を重ね、「投資すべきか否か」を評価す
 ユーザーがティッカー入力 (例: NVDA)
         │
         ▼
-1. データ自動取得 (yfinance)        … 財務・株価・52週レンジ・マクロ(金利/VIX/S&P500/金)
+1. データ自動取得
+   ├─ yfinance … 財務(複数年)・株価・各種指標・アナリスト目標株価・マクロ(金利/VIX/S&P500/金)
+   └─ SEC EDGAR … 最新10-Kの定性情報(事業詳細 Item1 / リスク要因 Item1A / MD&A Item7)
         │
         ▼
 2. 定量スコアリング (決定論的)       … 各投資家ロジックで客観採点。議論の土台
         │
         ▼
 3. AI議論 (ハイブリッド方式)
-   ├─ 初期見解  … 各AI投資家が自分の哲学で意見表明（並列）
+   ├─ 初期見解  … 各AI投資家が自分の哲学で意見表明
    ├─ 円卓討論  … 互いの見解に反論・補強
-   └─ 最終評価  … 司会AIが統合し「強気/中立/弱気＋確信度」を提示
+   └─ 最終評価  … 司会AIが統合し「強気/中立/弱気＋確信度＋12ヶ月目標株価」を提示
 ```
+
+### 収集データ
+- **yfinance**: 複数年の売上/純利益/FCF推移とCAGR、収益性(各利益率/ROE/ROA)、財務健全性(流動比率/D-E/FCF利回り)、バリュエーション(PER/PBR/PSR/EV-EBITDA/PEG)、配当、アナリストのコンセンサス目標株価・レーティング、事業概要
+- **SEC EDGAR (Form 10-K)**: 事業の詳細(Item 1)、リスク要因(Item 1A)、経営者による分析 MD&A(Item 7)。米国上場の10-K提出企業のみ（ETF/ADR等は自動スキップ）
 
 伝説の投資家たちの投資ロジックの調査・分析は
 [`docs/legendary_investors.md`](docs/legendary_investors.md) にまとめています。
@@ -62,6 +68,17 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 # Gemini を使う場合（既定モデル: gemini-2.5-flash）
 export GEMINI_API_KEY="..."
 ```
+
+### （任意）SEC EDGAR の User-Agent
+
+SECは識別可能な User-Agent を要求します。既定値でも動きますが、環境によって 403 で
+10-K取得に失敗する場合は、あなたの連絡先を設定すると確実です（任意）。
+
+```bash
+export SEC_EDGAR_USER_AGENT="Your Name your-email@example.com"
+```
+
+Streamlit Cloud では「Secrets」に `SEC_EDGAR_USER_AGENT = "Your Name your-email@example.com"` を追加します。
 
 ## 起動
 

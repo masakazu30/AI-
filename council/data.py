@@ -72,6 +72,7 @@ class CompanyData:
     summary: str = ""
     sector: str = "Unknown"
     industry: str = "Unknown"
+    filings: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
 
@@ -315,7 +316,9 @@ def _compute_metrics(ticker: yf.Ticker, info: dict[str, Any]) -> dict[str, Any]:
     return m
 
 
-def fetch_company(ticker_symbol: str, include_macro: bool = True) -> CompanyData:
+def fetch_company(
+    ticker_symbol: str, include_macro: bool = True, include_filings: bool = True
+) -> CompanyData:
     """ティッカーから企業データ一式を取得する。失敗時は ValueError を送出。"""
     ticker_symbol = ticker_symbol.strip().upper()
     if not ticker_symbol:
@@ -351,6 +354,17 @@ def fetch_company(ticker_symbol: str, include_macro: bool = True) -> CompanyData
 
     macro = fetch_macro() if include_macro else {}
 
+    filings: dict[str, Any] = {}
+    if include_filings:
+        try:
+            from . import edgar
+
+            filings = edgar.fetch_10k_sections(ticker_symbol)
+            if filings.get("error"):
+                warnings.append(f"SEC 10-K: {filings['error']}")
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"SEC 10-K の取得に失敗しました: {exc}")
+
     return CompanyData(
         ticker=ticker_symbol,
         name=info.get("shortName") or info.get("longName") or ticker_symbol,
@@ -359,6 +373,7 @@ def fetch_company(ticker_symbol: str, include_macro: bool = True) -> CompanyData
         summary=(info.get("longBusinessSummary") or "")[:1600],
         sector=info.get("sector") or "Unknown",
         industry=info.get("industry") or "Unknown",
+        filings=filings,
         warnings=warnings,
     )
 
@@ -475,5 +490,20 @@ def build_dossier(company: CompanyData) -> str:
         ]
     else:
         lines.append("- （マクロ情報なし）")
+
+    # --- SEC 10-K（定性情報） ---
+    f = company.filings
+    if f and not f.get("error"):
+        lines += ["", f"## SEC開示 10-K の定性情報（提出日: {f.get('filing_date', 'N/A')}）"]
+        if f.get("business"):
+            lines += ["", "### 事業の詳細 (Item 1. Business)", f["business"]]
+        if f.get("risk_factors"):
+            lines += ["", "### リスク要因 (Item 1A. Risk Factors)", f["risk_factors"]]
+        if f.get("mdna"):
+            lines += [
+                "",
+                "### 経営者による財政状態・経営成績の分析 (Item 7. MD&A)",
+                f["mdna"],
+            ]
 
     return "\n".join(lines)
