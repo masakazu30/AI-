@@ -203,8 +203,9 @@ if company is not None and grades is not None:
 
     debate = st.session_state.debate
 
-    tab_verdict, tab_debate, tab_quant, tab_filings, tab_data = st.tabs(
-        ["🏛️ 最終評価", "💬 議論の記録", "📊 定量スコア", "📑 SEC 10-K", "📄 取得データ"]
+    tab_verdict, tab_debate, tab_quant, tab_filings, tab_data, tab_claude = st.tabs(
+        ["🏛️ 最終評価", "💬 議論の記録", "📊 定量スコア", "📑 SEC 10-K",
+         "📄 取得データ", "🤖 Claudeへ貼付"]
     )
 
     # --- 最終評価 ---
@@ -274,6 +275,26 @@ if company is not None and grades is not None:
     with tab_data:
         st.caption("AI投資家に渡された銘柄ドシエ（自動収集された情報）")
         st.code(st.session_state.dossier, language="markdown")
+
+    # --- Claudeへ貼付（APIキー不要で正確なデータを使う運用） ---
+    with tab_claude:
+        st.caption(
+            "ここの全文をコピーして、Claudeの『伝説の評議会』プロジェクトに貼り付けてください。"
+            "正確な財務・10-Kデータ（無料取得）をもとに、Claude側（定額）で議論できます。"
+        )
+        claude_text = (
+            f"以下は {company.name}（{company.ticker}）の最新データです。"
+            "あなたのプロジェクト指示に従い『伝説の評議会』のディベートと"
+            "最終評価（12ヶ月目標株価を含む）を実行してください。"
+            "数値はこのデータを正として用い、不足分のみ必要に応じて補ってください。\n\n"
+            f"{st.session_state.dossier}\n\n"
+            f"{grades_to_text(grades)}"
+        )
+        st.code(claude_text, language="markdown")
+        st.caption(
+            "コピーはコードブロック右上のアイコンから。"
+            "プロジェクト未設定の場合は docs/claude_project_prompt.md の指示文を先に設定してください。"
+        )
 
 else:
     st.info(
